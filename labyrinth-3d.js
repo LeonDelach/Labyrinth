@@ -4,9 +4,9 @@ var boardDepth = 5;
 var boardHeight = 0.4;
 var ballRadius = 0.35;
 var boardRoot;
+var boardMesh;
 var ball;
 var wallMeshes = [];
-var holeMeshes = [];
 
 function wallTo3D(point) {
   if (typeof cW === "undefined" || typeof cH === "undefined" || cW === 0 || cH === 0) {
@@ -96,10 +96,53 @@ function syncBoardGeometryFrom2D() {
   });
   wallMeshes = [];
 
-  holeMeshes.forEach(function (mesh) {
-    mesh.dispose();
-  });
-  holeMeshes = [];
+  if (boardMesh) {
+    boardMesh.dispose();
+  }
+
+  var boardMat = new BABYLON.StandardMaterial("boardMat", scene);
+  boardMat.diffuseColor = new BABYLON.Color3(0.8, 0.54, 0.2);
+
+  boardMesh = BABYLON.MeshBuilder.CreateBox(
+    "board",
+    { width: boardWidth, height: boardHeight, depth: boardDepth },
+    scene
+  );
+  boardMesh.parent = boardRoot;
+  boardMesh.position.y = -0.45;
+  boardMesh.material = boardMat;
+
+  if (typeof holes !== "undefined") {
+    var boardCSG = BABYLON.CSG.FromMesh(boardMesh);
+
+    holes.forEach(function (holeDef) {
+      var center = boardTo3D(holeDef.x0, holeDef.y0);
+      var cutter = BABYLON.MeshBuilder.CreateCylinder(
+        "holeCutout",
+        {
+          height: 1.5,
+          diameter: 0.72,
+          tessellation: 48
+        },
+        scene
+      );
+      cutter.parent = boardRoot;
+      cutter.position.x = center.x;
+      cutter.position.z = center.z;
+      cutter.position.y = 0;
+      cutter.rotation.x = 0;
+      cutter.rotation.z = 0;
+
+      var cutterCSG = BABYLON.CSG.FromMesh(cutter);
+      boardCSG.subtractInPlace(cutterCSG);
+      cutter.dispose();
+    });
+
+    boardMesh.dispose();
+    boardMesh = boardCSG.toMesh("board", boardMat, scene, false);
+    boardMesh.parent = boardRoot;
+    boardMesh.position.y = -0.45;
+  }
 
   if (typeof walls !== "undefined") {
     walls.forEach(function (wallDef) {
@@ -124,21 +167,6 @@ function syncBoardGeometryFrom2D() {
       wallMat.diffuseColor = new BABYLON.Color3(0.5, 0.28, 0.12);
       wallMesh.material = wallMat;
       wallMeshes.push(wallMesh);
-    });
-  }
-
-  if (typeof holes !== "undefined") {
-    holes.forEach(function (holeDef) {
-      var center = boardTo3D(holeDef.x0, holeDef.y0);
-      var holeMesh = new Hole3D({
-        name: "hole3D",
-        x: center.x,
-        z: center.z,
-        diameter: 0.72,
-        height: 0.12
-      });
-      holeMesh.mesh.parent = boardRoot;
-      holeMeshes.push(holeMesh.mesh);
     });
   }
 }
@@ -173,17 +201,17 @@ function load3D() {
   hemi.intensity = 1.1;
 
   boardRoot = new BABYLON.TransformNode("boardRoot");
-  var board = BABYLON.MeshBuilder.CreateBox(
+  boardMesh = BABYLON.MeshBuilder.CreateBox(
     "board",
     { width: boardWidth, height: boardHeight, depth: boardDepth },
     scene
   );
-  board.parent = boardRoot;
-  board.position.y = -0.45;
+  boardMesh.parent = boardRoot;
+  boardMesh.position.y = -0.45;
 
   var boardMat = new BABYLON.StandardMaterial("boardMat", scene);
   boardMat.diffuseColor = new BABYLON.Color3(0.8, 0.54, 0.2);
-  board.material = boardMat;
+  boardMesh.material = boardMat;
 
   ball = BABYLON.MeshBuilder.CreateSphere(
     "ball",

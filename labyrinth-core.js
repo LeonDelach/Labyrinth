@@ -10,6 +10,8 @@ var walls = [], holes = [], w, h;
 var g = 1000; // gravity
 var ab = 0; // step, marble falls, increases during the fall until the marble hits the ground
 var r = 255;
+var dBall3D = 0.7;
+var terreH = 0;
 
 function dimension2X(x) {
   x = -(cW / fondW) * x + cW / 2;
@@ -37,7 +39,10 @@ function chute(h) {
       ball.parent = terre;
     }
   */
-  if (h > -2 + dBall3D / 2 + terreH) {
+  var ballDiameter = typeof dBall3D !== "undefined" ? dBall3D : 0.7;
+  var groundHeight = typeof terreH !== "undefined" ? terreH : 0;
+
+  if (h > -2 + ballDiameter / 2 + groundHeight) {
     h -= 3 * Math.pow(ab * 0.02, 2) / 2; // dt = 0.02
     ab += 1;
   }
@@ -56,6 +61,23 @@ function move() {
   vy += ay * dt;
   x += vx * dt;
   y += vy * dt;
+
+  if (x < rBalle) {
+    x = rBalle;
+    vx = Math.abs(vx) * reb;
+  }
+  if (x > cW - rBalle) {
+    x = cW - rBalle;
+    vx = -Math.abs(vx) * reb;
+  }
+  if (y < rBalle) {
+    y = rBalle;
+    vy = Math.abs(vy) * reb;
+  }
+  if (y > cH - rBalle) {
+    y = cH - rBalle;
+    vy = -Math.abs(vy) * reb;
+  }
 
   for (var i = 0; i < walls.length; i++) {
     w = walls[i];

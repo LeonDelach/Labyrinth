@@ -65,6 +65,11 @@ function buildBoard() {
   walls.length = 0;
   holes.length = 0;
 
+  walls.push(new wall(0, 0, 400, 0));
+  walls.push(new wall(400, 0, 400, 400));
+  walls.push(new wall(0, 400, 400, 400));
+  walls.push(new wall(0, 0, 0, 400));
+
   walls.push(new wall(120, 100, 280, 100));
   walls.push(new wall(280, 100, 280, 300));
   walls.push(new wall(80, 300, 240, 300));
