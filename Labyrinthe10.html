@@ -1,452 +1,58 @@
-<!doctype html>
-</html>
+﻿<!doctype html>
+<html>
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Saisons</title>
-    <!-- Babylon.js -->
-    <script src="../hand.minified-1.2.js"></script>
-    <script src="../babylon.js"></script>
-    <script src="../cannon.min.js"></script>
-    <script src="../oimo.min.js"></script>
-    <script src="../csg.js"></script>
-    <!--<script src="../BabylonCSG.js"></script>-->
-    <style>
-        html, body {
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+  <title>Labyrinthe</title>
 
-        #renderCanvas {
-            width: 400px;
-            height: 400px;
-            touch-action: none;
-        }
-        .right {
-          text-align: right;
-        }
-        .sliders {
-          padding: 5px;
-        }
-        input[type=range] {
-          position: relative;
-          top: 3px;
-        }
-        #sliders {
-          position: absolute;
-          top: 20px;
-          left:20px;
-          opacity: 0.5;
-        }
-    </style>
-  <script>
-    var canvas2D, ctx;
-    var show;
-    var cW, cH;
-    var x = 200, y = 200, vx=0, vy=0, ax=0, ay=0, dt=0.02, ddt=dt/10;
-    var rBalle = 20, rT = 30;
-    var m = 1/4;
-    var reb = 0.8;		//choc non élastique entre la bille et la paroi (voir move())
-    var walls = [], holes = [], w, h;
-    var g = 1000;			//gravité
-    var ab = 0;			//pas, chute de la bille, augmente lors de la chute jusqu'à ce que la bille touche la terre
-    var r = 255;
+  <script src="../hand.minified-1.2.js"></script>
+  <script src="../babylon.js"></script>
+  <script src="../cannon.min.js"></script>
+  <script src="../oimo.min.js"></script>
+  <script src="../csg.js"></script>
+  <script src="./labyrinth-core.js"></script>
+  <script src="./labyrinth-3d.js"></script>
 
-    var Position = {
-      get: function(obj) {
-        var curleft = curtop = 0;
-        if(obj.offsetParent) {
-          do {
-            curleft += obj.offsetLeft;
-            curtop += obj.offsetTop;
-          }
-          while((obj = obj.offsetParent));
-        }
-        return {x: curleft, y:curtop}; /* position par rapport à la fenêtre du coin supérieur gauche */
-      }
-    };
-
-    var canvas3D, engine, scene;
-    var fondW = 5,                 
-      fondL = fondW,               
-      fondH = 0.5;
-    var wallW = fondH,
-      wallH = 1;
-    var terreW = fondW*1.5, terreH = 0.2;
-    var angleFact = 0.02;
-    var scene, fond, terre;
-    var dBall3D = rBalle/40;
-    var material;
-    var ball;
-
-    function load3D() {
-      canvas3D = document.getElementById("renderCanvas"); // nécessaire
-      engine = new BABYLON.Engine(canvas3D, true); // nécessaire
-
-      // Création d'une scène (voir plus bas…)
-      scene = createScene();
-
-//      scene.setInclination(10); // pivote le fond de 10 degrés environ
-
-      engine.runRenderLoop(function() { // pour redessiner la scene automatiquement
-        scene.render();
-      });
-
-      // Resize
-      window.addEventListener("resize", function() {
-        engine.resize();
-      });
+  <style>
+    html, body {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
     }
 
-    var createScene = function() {
-      scene = new BABYLON.Scene(engine);
-
-      // Setup camera
-      var camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), scene);
-      camera.setPosition(new BABYLON.Vector3(0, 10, 10));
-      camera.attachControl(canvas3D, true);
-
-//      var light1 = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
-
-/*
-      var light2 = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(0, -1, 0), scene);
-      light2.intensity = 0.5;
-*/
-
-      var light2 = new BABYLON.SpotLight("Dir0", new BABYLON.Vector3(0, 10, 0),
-   						new  BABYLON.Vector3(0, -10, 0),
-   						1,
-   						1,
-   						scene);
-
-      fond = new BABYLON.Mesh.CreateBox("basement", fondW, scene);
-      fond.scaling.y = fondH / fondW; // déformer la boite verticalement
-      fond.bakeCurrentTransformIntoVertices();
-
-      // création d'un matériel de surface
-      material = new BABYLON.StandardMaterial("kosh", scene);
-      material.diffuseColor = new BABYLON.Color3(1, 0, 1);
-      material.specularColor = new BABYLON.Color3(1, 1, 0);
-      fond.material = material;
-
-      fond.bakeCurrentTransformIntoVertices();
-      
-
-      ball = new BABYLON.Mesh.CreateSphere("sphere", 10, dBall3D, scene);
-      ball.position.y = fondH / 2 + dBall3D / 2;
-
-      move();
-
-      new hole3D(-1, -1);
-
-      ball.parent = fond;
-
-      new wall3D(2.25, -2.5, 2.25, 2.5);      //mur vertical : Y1 < Y2
-      new wall3D(2.5, 2.25, -2.5, 2.25);      //mur horizontal : X1 > X2
-      new wall3D(-2.25, -2.5, -2.25, 2.5);
-      new wall3D(2.5, -2.25, -2.5, -2.25);
-      new wall3D(1, -1, 1, 1);
-
- 
-      // un peu de gazon sous le jeu…
-      terre = new BABYLON.Mesh.CreateBox("wall", terreW, scene);
-      terre.scaling.y = terreH/terreW;
-      terre.position.y = -2;
-      terre.material = new BABYLON.StandardMaterial("texture1", scene);
-      terre.material.diffuseTexture = new BABYLON.Texture("grass.jpg", scene);
-      terre.material.specularColor = new BABYLON.Color3(0,0,0);  // pour éviter les reflets
-
-
-      var shadowGenerator = new BABYLON.ShadowGenerator(1024, light2);
-      shadowGenerator.getShadowMap().renderList.push(ball);
-	  fond.receiveShadows = true;
-
-      // Animations (ne sert à rien pour l'instant)
-      scene.beforeRender = function() {};
-
-      scene.setInclination1 = function(x, y) { // pour incliner le fond (seulement autour de l'axe z pour l'instant
-        fond.rotation.z = x * angleFact;
-        //paroi.position.x = fondW / 2 - wallW / 2 + x/100;
-      }
-
-      scene.setInclination2 = function(z, y) { // pour incliner le fond (seulement autour de l'axe z pour l'instant
-        fond.rotation.x = z * angleFact;
-        //paroi.position.x = fondW / 2 - wallW / 2 + x/100;
-      }
-
-      return scene;
+    #renderCanvas {
+      width: 400px;
+      height: 400px;
+      touch-action: none;
     }
 
-    function dimension2X(x) {
-      x = -(cW/fondW) *x + cW/2;
-      return x;
+    .right {
+      text-align: right;
     }
 
-    function dimension2Y(y) {
-      y = (cH/fondL) *y + cH/2;
-      return y;
+    .sliders {
+      padding: 5px;
     }
 
-    function dimension3X(x) {
-      x = (x-cW/2) *(-fondW/cW);
-      return x;
+    input[type=range] {
+      position: relative;
+      top: 3px;
     }
 
-    function dimension3Y(y) {
-      y = (y-cH/2) *(fondL/cH);
-      return y;
+    #sliders {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      opacity: 0.5;
     }
-
-    function wall3D(X1, Y1, X2, Y2)   {
-      var W, D;                             //W pour width et D pour depth
-      if (X1 == X2 && Y1 != Y2)  {          //x1 == x2 mur vertical
-        W = wallW 
-        D = Math.abs(Y1-Y2)
-        walls.push(new wall(dimension2X(X1-W/2), dimension2Y(Y1), dimension2X(X2-W/2), dimension2Y(Y2)));   //paroi 2D verticale : y2 > y1
-        walls.push(new wall(dimension2X(X1+W/2), dimension2Y(Y1), dimension2X(X2+W/2), dimension2Y(Y2)));   //Y1 < Y2
-        walls.push(new wall(dimension2X(X1+W/2), dimension2Y(Y1), dimension2X(X1-W/2), dimension2Y(Y1)));   //paroi 2D horizontale : x2 > x1
-        walls.push(new wall(dimension2X(X2+W/2), dimension2Y(Y2), dimension2X(X2-W/2), dimension2Y(Y2)));   
-        //parois pour mur vertical : Y1 < Y2
-      };
-      if (X1 != X2 && Y1 == Y2)  {          //y1 == y2 mur horizontald
-        W = Math.abs(X1-X2) 
-        D = wallW
-        walls.push(new wall(dimension2X(X1), dimension2Y(Y1-D/2), dimension2X(X2), dimension2Y(Y2-D/2)));   
-        walls.push(new wall(dimension2X(X1), dimension2Y(Y1+D/2), dimension2X(X2), dimension2Y(Y2+D/2)));   
-        walls.push(new wall(dimension2X(X1), dimension2Y(Y1-D/2), dimension2X(X1), dimension2Y(Y1+D/2)));   
-        walls.push(new wall(dimension2X(X2), dimension2Y(Y2-D/2), dimension2X(X2), dimension2Y(Y2+D/2)));   
-        //parois pour mur horizontal : X1 > X2
-      };
-      this.mur = new BABYLON.Mesh.CreateBox("wall", fondL, scene);
-      
-      this.mur.scaling.x = W/fondL;
-      this.mur.scaling.z = D/fondL;
-
-      this.mur.scaling.y = wallH / fondW;
-
-      //paroi.position.y = (fondW / fondH) * (fondH / 2 + wallH / 2);
-      this.mur.position.y = fondH / 2 + wallH / 2;   //ok
-      this.mur.position.x = (X1 + X2) / 2;    
-      this.mur.position.z = (Y1 + Y2) / 2;
-      this.mur.parent = fond;                         // associe la paroi au fond (pour les rotations !)
-    }
-
-    function hole3D(X0, Y0)		{
-    	holes.push(new hole(dimension2X(X0), dimension2Y(Y0)));
-
-	  	this.trou = new BABYLON.Mesh.CreateCylinder("hole", 2, rT/40, rT/40, 20, 1, scene); 		//(name, height, diamTop, diamBottom, tessellation, heightSubdivs, scene)
-	  	this.trou.position.y = fond.position.y - fondH; // le cylindre-trou doit dépasser le fond de chaque côté
-	  	this.trou.position.x = X0;
-	  	this.trou.position.z = Y0;
-
-		var fondCSG = BABYLON.CSG.FromMesh(fond);  // crée un objet spécial pour l'intersection
-		var trouCSG = BABYLON.CSG.FromMesh(this.trou);  // idem
-
-		var fondT = fondCSG.subtract(trouCSG);     // enlève le cylindre du fond
-		fondT.material = material;
-
-		// Disposing original meshes since we don't want to see them on the scene
-		fond.dispose();
-		this.trou.dispose();
-
-		fond = fondT.toMesh("csg", material, scene); // transforme l'objet spécial troué en object 3D
-		fond.bakeCurrentTransformIntoVertices();
-    }
-    
-
-    function wall(x1, y1, x2, y2) {
-      this.x1 = x1;
-      this.y1 = y1;
-      this.x2 = x2;      
-      this.y2 = y2;
-      this.testV = function(x,y){
-        return (x1 == x2 && y <= y2 && y >= y1 && x < x1+rBalle && x > x1-rBalle);    // parois verticales : x1 = x2 et y2 > y1
-      }
-      this.testH = function(x,y){
-        return (y1 == y2 && x <= x2 && x >= x1 && y < y1+rBalle && y > y1-rBalle);    // parois horizontales : y1 = y2 et x2 > x1
-      }
-      this.draw = function() {
-        ctx.beginPath();    // commencer un tracé
-        ctx.moveTo(x1, y1); // placer la "plume" au point (x1, y1)
-        ctx.lineTo(x2, y2); // programmer un trait jusqu'au point (x2, y2)
-        ctx.stroke();       // tracer le tracé (un seul trait, ici)
-      }
-      this.extremite1 = function(x,y){
-        return (Math.sqrt(Math.pow(x-x1,2)+Math.pow(y-y1,2),2) < rBalle) 
-      }
-      this.extremite2 = function(x,y){
-        return (Math.sqrt(Math.pow(x-x2,2)+Math.pow(y-y2,2),2) < rBalle)    /*on teste si la distance des 2 extrémités du mur à la balle est inférieur à rBalle*/
-      }
-    }
-
-    function hole(x0, y0) {
-      this.x0 = x0;
-      this.y0 = y0;
-      this.inside = function(x, y)  {
-        return (rT > Math.sqrt(Math.pow(x0-x,2)+Math.pow(y0-y,2),2) && rT-rBalle < Math.sqrt(Math.pow(x0-x,2)+Math.pow(y0-y,2),2))    //à l'intérieur du trou
-      }
-      this.fail	= function(x, y)	{
-      	return (rT-rBalle >= Math.sqrt(Math.pow(x0-x,2)+Math.pow(y0-y,2),2))
-      }
-      this.draw = function()  {
-        ctx.fillStyle = "black";
-        ctx.beginPath();
-        ctx.arc(x0,y0,rT, 0, 2*Math.PI);
-        ctx.fill();
-      }
-    }
-    
-    function draw() {
-      ctx.fillStyle = "orange";
-      ctx.fillRect(0,0,cW,cH);
-      for (var j=0; j < holes.length; j++){
-        h = holes[j]
-        h.draw();
-      }
-      ctx.fillStyle = "rgb(" + r + ", 0, 0)";
-      console.log(ctx.fillStyle);
-      ctx.beginPath();
-      ctx.arc(x,y,rBalle, 0, 2*Math.PI);
-      ctx.fill();
-
-      for (var i=0; i < walls.length; i++){
-        w = walls[i]
-        w.draw();
-      }         //boucle pour parcourir le tableau et dessiner les murs
-    }
-
-    function chute(h)	{
-/*    	if (h <= -2+dBall3D/2 +terreH) {
-    		ball.parent = terre;
-    	}*/
-    	if (h > -2+dBall3D/2 +terreH) {
-   			h -= 3 * Math.pow(ab*0.02, 2) /2;		//dt = 0.02
-   			ab += 1;
-    	}
-    	return h;
-    }
-
-    function move() {
-      vx += ax * dt;
-      vy += ay * dt;
-      x += vx * dt;  // x = x0 + vx0 * t
-      y += vy * dt;
-      for (var i=0; i < walls.length; i++){
-        w = walls[i];
-        var x1 = w.x1, y1 = w.y1, x2 = w.x2, y2 = w.y2, b = 0;
-        if (w.testV(x,y) == true) {
-          while (w.testV(x,y) == true)  {
-            x -= vx*ddt;
-            y -= vy*ddt;
-            b += ddt;
-          }
-          vx = -vx*reb;
-          x += b*vx;
-          y += b*vy;
-        }
-        if (w.testH(x,y) == true) { 
-          while (w.testH(x,y) == true)  {
-            x -= vx*ddt;
-            y -= vy*ddt;
-            b += ddt;
-          }
-          vy = -vy*reb;
-          x += b*vx;
-          y += b*vy;
-        }
-        if (w.extremite1(x,y) == true) {
-          while (w.extremite1(x,y) == true)  {
-            x -= vx*ddt;
-            y -= vy*ddt;
-            b += ddt;
-          }
-          vx = (vx*(y1-y)+vy*(-x1+x)*(y1-y)-vx*(x1-x)-vy*(y1-y)*(x1-x))/ Math.pow(rBalle,2);
-          vy = (vx*(y1-y)+vy*(-x1+x)*(-x1+x)-vx*(x1-x)-vy*(y1-y)*(y1-y))/ Math.pow(rBalle,2);
-          x += b*vx;
-          y += b*vy;
-        }
-        if (w.extremite2(x,y) == true) {
-          while (w.extremite2(x,y) == true)  {
-            x -= vx*ddt;
-            y -= vy*ddt;
-            b += ddt;
-          }
-          vx = (vx*(y2-y)+vy*(-x2+x)*(y2-y)-vx*(x2-x)-vy*(y2-y)*(x1-x))/ Math.pow(rBalle,2);
-          vy = (vx*(y2-y)+vy*(-x2+x)*(-x2+x)-vx*(x2-x)-vy*(y2-y)*(y2-y))/ Math.pow(rBalle,2);
-          x += b*vx;
-          y += b*vy;
-        }
-      }
-
-      var acx = 0, acy = 0;
-        
-      for (var j=0; j < holes.length; j++){
-        h = holes[j];
-        
-        if (h.inside(x, y) == true) {
-        	var d = Math.sqrt(Math.pow(h.x0-x,2) + Math.pow(h.y0-y,2));		// distance centre du trou - bille
-
-        	ax -= acx;
-        	ay -= acy;
-
-        	acx = g*Math.tan(Math.asin((rT - d)/rBalle)) * (h.x0-x)/d;   //composante x de l'accélération centripète	
-        	acy = g*Math.tan(Math.asin((rT - d)/rBalle)) * (h.y0-y)/d;	 //composante y
-
-	       	ax += acx;
-	        ay += acy;
-        }
-
-   		if (h.fail(x, y) == true)	{
-          	dt = 0;
-          	ball.position.y = chute(ball.position.y);
-          	r -= 1;
-		}
-      }
-
-      ax -= acx;
-      ay -= acy;
-
-      draw();
-      ball.position.z = dimension3Y(y);
-      ball.position.x = dimension3X(x);
-      //console.log(ball.position.x + "\n" + ball.position.y + "\n" + ball.position.z);	
-
-    }
-
-    function load2D() {
-      show = document.getElementById("show");
-      canvas2D = document.getElementById("dessin");    
-      ctx = canvas2D.getContext('2d');
-      canvas2D.onmousemove = function(event) {
-        ax = (event.clientX - Position.get(canvas2D).x - cW/2)*m;
-        ay = (event.clientY - Position.get(canvas2D).y - cH/2)*m;
-        scene.setInclination1(ax/10);
-        scene.setInclination2(ay/10);
-      };  
-      cW = canvas2D.width;
-      cH = canvas2D.height;
-      x = cW/2;
-      y = cH/2;
-      draw();
-      var anim = setInterval(move, dt*1000); // exécuter move() régulièrement
-    }
-
-    function restart()	{
-    	vx = 0;
-    	vy = 0;
-    	ax = 0;
-    	ay = 0;
-    }
-   
-  </script>
+  </style>
 </head>
 <body onload="load2D(); load3D();">
   <canvas id="dessin" width="400" height="400"></canvas>
   <canvas id="renderCanvas"></canvas>
   <p id="show"></p>
-  <input type="submit" value="Recommencer" onclick="restart(); load2D(); load3D();">
+  <input type="submit" value="Restart" onclick="restart(); load2D(); load3D();">
 </body>
 </html>
