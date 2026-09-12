@@ -1,6 +1,7 @@
 var canvas2D, ctx;
 var show;
 var cW, cH;
+var fondW = 5, fondL = fondW, fondH = 0.5;
 var x = 200, y = 200, vx = 0, vy = 0, ax = 0, ay = 0, dt = 0.02, ddt = dt / 10;
 var rBalle = 20, rT = 30;
 var m = 1 / 4;
@@ -22,6 +23,17 @@ var Position = {
     return { x: curleft, y: curtop }; // position of the top-left corner relative to the window
   }
 };
+
+function buildBoard() {
+  walls.length = 0;
+  holes.length = 0;
+
+  walls.push(new wall(120, 100, 280, 100));
+  walls.push(new wall(280, 100, 280, 300));
+  walls.push(new wall(80, 300, 240, 300));
+
+  holes.push(new hole(330, 330));
+}
 
 function dimension2X(x) {
   x = -(cW / fondW) * x + cW / 2;
@@ -127,6 +139,13 @@ function chute(h) {
 }
 
 function move() {
+  if (typeof ball === "undefined" || !ball || !scene) {
+    if (ctx) {
+      draw();
+    }
+    return;
+  }
+
   vx += ax * dt;
   vy += ay * dt;
   x += vx * dt;
@@ -212,8 +231,12 @@ function move() {
   ay -= acy;
 
   draw();
-  ball.position.z = dimension3Y(y);
-  ball.position.x = dimension3X(x);
+  if (typeof syncBallFromBoard === "function") {
+    syncBallFromBoard();
+  } else {
+    ball.position.z = dimension3Y(y);
+    ball.position.x = dimension3X(x);
+  }
 }
 
 function load2D() {
@@ -224,12 +247,15 @@ function load2D() {
   canvas2D.onmousemove = function (event) {
     ax = (event.clientX - Position.get(canvas2D).x - cW / 2) * m;
     ay = (event.clientY - Position.get(canvas2D).y - cH / 2) * m;
-    scene.setInclination1(ax / 10);
-    scene.setInclination2(ay / 10);
+    if (scene && typeof scene.setInclination1 === "function") {
+      scene.setInclination1(ax / 10);
+      scene.setInclination2(ay / 10);
+    }
   };
 
   cW = canvas2D.width;
   cH = canvas2D.height;
+  buildBoard();
   x = cW / 2;
   y = cH / 2;
   draw();
