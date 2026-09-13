@@ -1,33 +1,51 @@
 # Labyrinth
 
-A small browser-based marble labyrinth prototype with a 2D game board and a Babylon.js 3D mirror.
+A browser-based marble labyrinth prototype with a 2D playfield and a Babylon.js 3D mirror.
 
 ## Overview
 
-This project includes:
+The game is organized around a small object-oriented structure:
 
-- a 2D canvas version of the labyrinth gameplay
-- a 3D Babylon.js visualization that mirrors the 2D board
-- a simple wall-and-hole layout with a marble that can be tilted by moving the mouse
+- model classes represent the logical game entities
+- a Game instance handles the rules and update loop
+- renderers draw the board in 2D and in 3D
+
+The objective is to keep the board state as the source of truth while rendering remains separate.
 
 ## How to run
 
-Open `Labyrinthe10.html` in a browser.
+Open labyrinth.html in a browser.
 
-Because the project uses a browser script loader, opening the file directly in a browser is the expected workflow for this prototype.
+This project is designed to work as a local file prototype, so the browser is expected to load the scripts directly without a build step.
 
-## Files
+## Project structure
 
-- `Labyrinthe10.html` — page bootstrap
-- `labyrinth-core.js` — physics and gameplay loop
-- `labyrinth-board.js` — wall and hole definitions and board setup
-- `labyrinth-render.js` — 2D canvas drawing and rendering helpers
-- `labyrinth-3d.js` — Babylon.js 3D scene and board mirroring
+- labyrinth.html — main entry page
+- src/model/ — logical game objects (Board, Marble, Wall, Hole, Arrival)
+- src/core/Game.js — rules, update loop, win/loss handling
+- src/render/CanvasRenderer.js — 2D canvas rendering
+- src/render/BabylonRenderer.js — 3D Babylon.js rendering
+- src/main.js — application bootstrap
+
+## Design notes
+
+### Model vs rendering
+
+The model classes contain the geometry and behavior of the game elements. The renderers are responsible for turning that model into visible shapes.
+
+This separation keeps the gameplay logic independent from the visual layer and makes it easier to maintain the 2D and 3D versions in sync.
+
+### Object-oriented approach
+
+The game is moving toward a simple domain model:
+
+- Wall stores segment geometry and collision checks
+- Hole stores the hole position and radius
+- Arrival stores the destination zone
+- Marble stores position, velocity, and acceleration
+- Board stores collections of those objects
+- Game orchestrates the simulation and end conditions
 
 ## Notes
 
-This is still a proof-of-concept / prototype project. The 3D version is intended to mirror the 2D logic while the visual representation is kept intentionally simple.
-
-## Refactor plan
-
-A full object-oriented refactor is not being done yet. The current goal is to keep the prototype stable while the gameplay and board mirroring are validated. Once the mechanics are settled, the next refactor could move the wall, hole, marble, and board into a clearer class-based structure.
+This refactor is intentionally incremental. The goal is to keep gameplay stable while improving readability and structure, rather than over-engineering too early.
