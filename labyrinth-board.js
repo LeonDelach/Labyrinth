@@ -26,6 +26,8 @@ function wall(x1, y1, x2, y2) {
   };
 
   this.draw = function () {
+    ctx.strokeStyle = "#5a2b8f";
+    ctx.lineWidth = 8;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -61,6 +63,21 @@ function hole(x0, y0) {
   };
 }
 
+var arrival = {
+  x: 350,
+  y: 60,
+  radius: 18,
+  draw: function () {
+    ctx.fillStyle = "#00cc66";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+};
+
 function buildBoard() {
   walls.length = 0;
   holes.length = 0;
@@ -74,5 +91,7 @@ function buildBoard() {
   walls.push(new wall(280, 100, 280, 300));
   walls.push(new wall(80, 300, 240, 300));
 
+  arrival.x = 350;
+  arrival.y = 60;
   holes.push(new hole(330, 330));
 }

@@ -12,6 +12,25 @@ var ab = 0; // step, marble falls, increases during the fall until the marble hi
 var r = 255;
 var dBall3D = 0.7;
 var terreH = 0;
+var gameStatus = "playing";
+
+function triggerGameEnd(message) {
+  if (gameStatus !== "playing") {
+    return;
+  }
+
+  gameStatus = message === "You won" ? "won" : "lost";
+  dt = 0;
+  alert(message);
+}
+
+function hasReachedArrival() {
+  if (typeof arrival === "undefined") {
+    return false;
+  }
+
+  return Math.sqrt(Math.pow(arrival.x - x, 2) + Math.pow(arrival.y - y, 2)) <= arrival.radius;
+}
 
 function dimension2X(x) {
   x = -(cW / fondW) * x + cW / 2;
@@ -50,6 +69,10 @@ function chute(h) {
 }
 
 function move() {
+  if (gameStatus !== "playing") {
+    return;
+  }
+
   if (typeof ball === "undefined" || !ball || !scene) {
     if (ctx) {
       draw();
@@ -149,10 +172,19 @@ function move() {
     }
 
     if (h.fail(x, y) == true) {
+      triggerGameEnd("You lost");
       dt = 0;
-      ball.position.y = chute(ball.position.y);
+      if (ball) {
+        ball.position.y = chute(ball.position.y);
+      }
       r -= 1;
+      return;
     }
+  }
+
+  if (hasReachedArrival()) {
+    triggerGameEnd("You won");
+    return;
   }
 
   ax -= acx;
@@ -168,8 +200,17 @@ function move() {
 }
 
 function restart() {
+  gameStatus = "playing";
+  dt = 0.02;
   vx = 0;
   vy = 0;
   ax = 0;
   ay = 0;
+  if (typeof cW !== "undefined" && typeof cH !== "undefined") {
+    x = cW / 2;
+    y = cH / 2;
+  }
+  if (typeof buildBoard === "function") {
+    buildBoard();
+  }
 }

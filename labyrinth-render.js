@@ -2,6 +2,10 @@ function draw() {
   ctx.fillStyle = "orange";
   ctx.fillRect(0, 0, cW, cH);
 
+  if (typeof arrival !== "undefined") {
+    arrival.draw();
+  }
+
   for (var j = 0; j < holes.length; j++) {
     h = holes[j];
     h.draw();

@@ -5,6 +5,7 @@ var boardHeight = 0.4;
 var ballRadius = 0.35;
 var boardRoot;
 var boardMesh;
+var arrivalMesh;
 var ball;
 var wallMeshes = [];
 
@@ -99,6 +100,9 @@ function syncBoardGeometryFrom2D() {
   if (boardMesh) {
     boardMesh.dispose();
   }
+  if (arrivalMesh) {
+    arrivalMesh.dispose();
+  }
 
   var boardMat = new BABYLON.StandardMaterial("boardMat", scene);
   boardMat.diffuseColor = new BABYLON.Color3(0.8, 0.54, 0.2);
@@ -144,6 +148,25 @@ function syncBoardGeometryFrom2D() {
     boardMesh.position.y = -0.45;
   }
 
+  if (typeof arrival !== "undefined") {
+    var arrivalPos = boardTo3D(arrival.x, arrival.y);
+    arrivalMesh = BABYLON.MeshBuilder.CreateCylinder(
+      "arrival3D",
+      { height: 0.05, diameter: 0.52, tessellation: 24 },
+      scene
+    );
+    arrivalMesh.parent = boardRoot;
+    arrivalMesh.position.x = arrivalPos.x;
+    arrivalMesh.position.z = arrivalPos.z;
+    arrivalMesh.position.y = -0.25 + 0.03;
+    arrivalMesh.rotation.x = 0;
+
+    var arrivalMat = new BABYLON.StandardMaterial("arrivalMaterial", scene);
+    arrivalMat.diffuseColor = new BABYLON.Color3(0, 1, 0.3);
+    arrivalMat.emissiveColor = new BABYLON.Color3(0.1, 0.7, 0.2);
+    arrivalMesh.material = arrivalMat;
+  }
+
   if (typeof walls !== "undefined") {
     walls.forEach(function (wallDef) {
       var p1 = wallTo3D({ x: wallDef.x1, y: wallDef.y1 });
@@ -164,7 +187,7 @@ function syncBoardGeometryFrom2D() {
       wallMesh.rotation.y = -angle;
 
       var wallMat = new BABYLON.StandardMaterial("wallMaterial", scene);
-      wallMat.diffuseColor = new BABYLON.Color3(0.5, 0.28, 0.12);
+      wallMat.diffuseColor = new BABYLON.Color3(0.45, 0.25, 0.7);
       wallMesh.material = wallMat;
       wallMeshes.push(wallMesh);
     });
