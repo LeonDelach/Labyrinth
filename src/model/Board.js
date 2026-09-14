@@ -9,21 +9,23 @@ class Board {
     this.walls = [];
     this.holes = [];
     this.arrival = null;
+    this.start = { x: width / 2, y: height / 2 };
+  }
+
+  applyPreset(preset) {
+    const config = preset || window.Labyrinth.BoardPresets?.playground || null;
+    if (!config) {
+      return;
+    }
+
+    this.start = { ...config.start };
+    this.walls = (config.walls || []).map((wall) => new Wall(wall.x1, wall.y1, wall.x2, wall.y2));
+    this.holes = (config.holes || []).map((hole) => new Hole(hole.x0, hole.y0, hole.radius));
+    this.arrival = new Arrival(config.arrival.x, config.arrival.y, config.arrival.radius || 18);
   }
 
   buildDefault() {
-    this.walls = [
-      new Wall(0, 0, this.width, 0),
-      new Wall(this.width, 0, this.width, this.height),
-      new Wall(0, this.height, this.width, this.height),
-      new Wall(0, 0, 0, this.height),
-      new Wall(120, 100, 280, 100),
-      new Wall(280, 100, 280, 300),
-      new Wall(80, 300, 240, 300)
-    ];
-
-    this.holes = [new Hole(330, 330, 30)];
-    this.arrival = new Arrival(350, 60, 18);
+    this.applyPreset(window.Labyrinth.BoardPresets?.playground);
   }
 }
 
